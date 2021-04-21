@@ -1,0 +1,13 @@
+name = "Sialia"
+uuid = "ef95e2bf-71a3-4227-91b8-409236ae0a01"
+authors = ["Mark Wardle <mark@potient.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.6"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

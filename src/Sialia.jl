@@ -1,5 +1,5 @@
 module Sialia
 
-# Write your package code here.
+include("Events.jl")
 
 end

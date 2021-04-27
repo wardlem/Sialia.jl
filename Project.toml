@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 CBOR = "7f3e1038-61bc-5414-967e-017c9d82adda"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Mongoc = "4fe8b98c-fc19-5c23-8ec2-168ff83495f2"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Redis = "0cf705f9-a9e2-50d1-a699-2b372a39b750"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"

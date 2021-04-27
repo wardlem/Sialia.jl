@@ -1,4 +1,3 @@
-@enum DispatcherState stopped=0 running
 @enum OutboxKind send=1 acknowledge
 
 abstract type EventDispatcher end
@@ -7,7 +6,7 @@ mutable struct RedisEventDispatcher <: EventDispatcher
     conn::Redis.RedisConnection
     group_id::AbstractString
     consumer_id::AbstractString
-    state::DispatcherState
+    state::ServiceState
     inbox::Channel{Event}
     outbox::Channel{Tuple{OutboxKind, Event}}
     claim_time::Dates.Period
@@ -29,7 +28,7 @@ function is_running(dispatcher::RedisEventDispatcher)
 end
 
 function _redis_data_to_event(stream, eventarr)
-    internal_id = eventarr[1]
+    publish_id = eventarr[1]
     eventdata = eventarr[2]
     recorddata = Dict{String,Any}()
     for ind = 1:2:size(eventdata, 1)
@@ -56,7 +55,7 @@ function _redis_data_to_event(stream, eventarr)
         stream_info.event_name,
         type=stream_info.type,
         id=id,
-        internal_id=internal_id,
+        publish_id=publish_id,
         aggregate_id=aggregate_id,
         datetime=datetime,
         correlation_id=correlation_id,
@@ -86,9 +85,9 @@ function _run(dispatcher::RedisEventDispatcher, streams::Vector{String})
             try
                 (kind, event) = take!(dispatcher.outbox)
                 redis_args = if kind == acknowledge
-                    ["XACK", string(stream_info(event)), dispatcher.group_id, event.internal_id]
+                    ["XACK", string(stream_info(event)), dispatcher.group_id, event.publish_id]
                 elseif kind == send
-                    eventid = if isnothing(event.internal_id) "*" else event.internal_id end
+                    eventid = if isnothing(event.publish_id) "*" else event.publish_id end
                     redis_args = [
                         "XADD",
                         string(stream_info(event)),

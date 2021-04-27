@@ -1,8 +1,9 @@
-struct EventMetadata
+mutable struct EventMetadata
     datetime::Dates.DateTime
     correlation_id::UUID
     causation_id::UUID
     published::Bool
+    position::Union{Int,Nothing}
 end
 
 struct EventContext
@@ -12,6 +13,7 @@ end
 struct EventAggregate
     name::String
     id::Union{UUID,Nothing}
+    revision::Union{Int,Nothing}
 end
 
 struct StreamInfo
@@ -36,6 +38,7 @@ end
 
 const EventData = Dict
 const EventCustom = Dict
+const EventState = Dict
 
 const EventTypes = Set([
     :command,
@@ -45,15 +48,15 @@ const EventTypes = Set([
 
 struct Event
     id::UUID
-    internal_id::Union{String, Nothing}
+    publish_id::Union{String, Nothing}
     name::String
     type::Symbol
     context::EventContext
     aggregate::EventAggregate
     metadata::EventMetadata
     custom::EventCustom
-    # raw_data::Union{Vector{UInt8},Nothing}
     data::EventData
+    state::Union{EventState,Nothing}
 end
 
 function Event(
@@ -62,7 +65,7 @@ function Event(
     event_name::String;
     type::Symbol=:domain,
     id::UUID=UUIDs.uuid4(),
-    internal_id::Union{String,Nothing}=nothing,
+    publish_id::Union{String,Nothing}=nothing,
     aggregate_id::Union{UUID,Nothing}=nothing,
     datetime::Dates.DateTime=Dates.now(Dates.UTC),
     previous::Union{Event,Nothing}=nothing,
@@ -71,6 +74,9 @@ function Event(
     published::Bool=false,
     custom::EventCustom=EventCustom(),
     data::EventData=EventData(),
+    position::Union{Int,Nothing}=nothing,
+    revision::Union{Int,Nothing}=nothing,
+    state::Union{EventState,Nothing}=nothing
 )
     # Validate the event
     if isempty(context_name) || !isnothing(match(r"\.", context_name))
@@ -107,17 +113,45 @@ function Event(
 
     return Event(
         id,
-        internal_id,
+        publish_id,
         event_name,
         type,
         EventContext(context_name),
-        EventAggregate(aggregate_name, aggregate_id),
-        EventMetadata(datetime, correlation_id, causation_id, published),
+        EventAggregate(aggregate_name, aggregate_id, revision),
+        EventMetadata(datetime, correlation_id, causation_id, published, position),
         custom,
         data,
+        state,
     )
 end
 
-function stream_info(event::Event)
+function stream_info(event::Event) :: StreamInfo
     StreamInfo(event.type, event.context.name, event.aggregate.name, event.name)
+end
+
+function Base.parse(::Type{Event}, doc::Mongoc.BSON) :: Event
+    Event(
+        doc["id"],
+        nothing,
+        doc["name"],
+        :domain,
+        EventContext(
+            doc["context"]["name"]
+        ),
+        EventAggregate(
+            doc["aggregate"]["name"],
+            doc["aggregate"]["id"],
+            doc["aggregate"]["revision"],
+        ),
+        EventMetadata(
+            doc["metadata"]["datetime"],
+            doc["metadata"]["correlation_id"],
+            doc["metadata"]["causation_id"],
+            doc["metadata"]["published"],
+            doc["metadata"]["position"],
+        ),
+        Dict(doc["custom"]),
+        Dict(doc["data"]),
+        nothing,
+    )
 end

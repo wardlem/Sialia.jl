@@ -12,6 +12,7 @@ Redis = "0cf705f9-a9e2-50d1-a699-2b372a39b750"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
+Redis = "1"
 julia = "1.6"
 
 [extras]
